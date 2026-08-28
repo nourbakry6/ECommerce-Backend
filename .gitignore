@@ -10,3 +10,4 @@ obj/
 # User secrets / local settings
 appsettings.Development.json
 *.tmp
+.env
