@@ -7,13 +7,15 @@ namespace ECommerce.Application.Interface
 {
     public interface ICategoryRepository
     {
-        List<Category> GetAll();
-        void Add(Category category) ;
-        void Update(Category category);
-        void Delete(Category category);
-        Category? GetById(int id);
-         
+        Task<List<Category>> GetAll();
 
-        
+        Task Add(Category category);
+
+        Task Update(Category category);
+
+        Task Delete(Category category);
+
+        Task<Category?> GetById(int id);
+
     }
 }

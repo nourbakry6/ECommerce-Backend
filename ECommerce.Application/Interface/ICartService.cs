@@ -8,12 +8,15 @@ namespace ECommerce.Application.Interface
 {
     public interface ICartService
     {
-        bool ClearCart(int userid);
-    CartDTO? GetByUserId(int userId);
-     bool UpdateItem(int itemid,CartItemUpdate cartItemUpdate);
-     bool DeleteItem(int itemid);
-     void AddItem(int userid,CartItemAddDTO cartItemAdd);
-    
+        Task<bool> ClearCart(int userId);
+
+        Task<CartDTO?> GetByUserId(int userId);
+
+        Task<bool> UpdateItem(int itemId, CartItemUpdate cartItemUpdate);
+
+        Task<bool> DeleteItem(int itemId);
+
+        Task <string?>AddItem(int userId, CartItemAddDTO cartItemAdd);
 
     }
 }

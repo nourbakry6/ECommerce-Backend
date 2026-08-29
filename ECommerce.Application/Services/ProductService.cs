@@ -1,8 +1,5 @@
 ﻿using ECommerce.Application.DTO;
-using ECommerce.Application.DTO;
 using ECommerce.Application.Interface;
-using ECommerce.Application.Interface;
-using ECommerce.Domain.entites;
 using ECommerce.Domain.entites;
 
 namespace ECommerce.Application.Services;
@@ -10,13 +7,14 @@ namespace ECommerce.Application.Services;
 public class ProductService : IProductService
 {
     private readonly IProductRepository _productRepository;
-
-    public ProductService(IProductRepository productRepository)
+    private readonly IUnitOfWork _unitOfWork;
+    public ProductService(IProductRepository productRepository,IUnitOfWork unitOfWork)
     {
         _productRepository = productRepository;
+        _unitOfWork = unitOfWork;
     }
 
-    public void Add(ProductCreateDTO productDto)
+    public async Task Add(ProductCreateDTO productDto)
     {
         var product = new Product
         {
@@ -28,65 +26,72 @@ public class ProductService : IProductService
             CategoryId = productDto.CategoryId
         };
 
-        _productRepository.Add(product);
+        await _productRepository.Add(product);
     }
 
-    
+    public async Task<List<ProductDTO>> GetAll()
+    {
+        var products = await _productRepository.GetAll();
 
-    public List<ProductDTO> GetAll()
-    {//ba3ml select mae list
-        var products=_productRepository.GetAll();
-        return products.Select(c => new ProductDTO { 
-        Name=c.Name,
-        Description=c.Description,
-        Price=c.Price,
-        Stock=c.Stock,
-        ImageUrl=c.ImageUrl,
-        Categoryname = c.Category.Name,
-       Id=c.Id
-        
-        
+        return products.Select(c => new ProductDTO
+        {
+            Id = c.Id,
+            Name = c.Name,
+            Description = c.Description,
+            Price = c.Price,
+            Stock = c.Stock,
+            ImageUrl = c.ImageUrl,
+            Categoryname = c.Category.Name
         }).ToList();
-
-
     }
 
+    public async Task<ProductDTO?> GetById(int id)
+    {
+        var product = await _productRepository.GetById(id);
 
-    public ProductDTO? GetById(int id)
-    { var product =_productRepository.GetById(id);
-    if(product == null)return null;
-        return new ProductDTO {
+        if (product == null)
+            return null;
+
+        return new ProductDTO
+        {
+            Id = product.Id,
             Name = product.Name,
             Description = product.Description,
             Price = product.Price,
             Stock = product.Stock,
             ImageUrl = product.ImageUrl,
-            Categoryname = product.Category.Name,
-         
-
+            Categoryname = product.Category.Name
         };
-
-
     }
 
-    public bool Update(int id, ProductUpdateDTO productDTO)
+    public async Task<bool> Update(int id, ProductUpdateDTO productDTO)
     {
-        var product = _productRepository.GetById(id);
-      if(product == null) return false ;
-      product.Name = productDTO.Name;
-      product.Description = productDTO.Description;
-      product.Price= productDTO.Price;
-      product.Stock= productDTO.Stock;
-      product.ImageUrl = productDTO.ImageUrl;
-      product.CategoryId= productDTO.CategoryId;
-        _productRepository.Update(product);
+        var product = await _productRepository.GetById(id);
+
+        if (product == null)
+            return false;
+
+        product.Name = productDTO.Name;
+        product.Description = productDTO.Description;
+        product.Price = productDTO.Price;
+        product.Stock = productDTO.Stock;
+        product.ImageUrl = productDTO.ImageUrl;
+        product.CategoryId = productDTO.CategoryId;
+
+        await _productRepository.Update(product);
+        await _unitOfWork.SaveChangesAsync();
         return true;
     }
-    public bool DeleteById(int id)
+
+    public async Task<bool> DeleteById(int id)
     {
-        var product = _productRepository.GetById(id);
-        if (product == null) return false;
-        _productRepository.DeleteById(product);
+        var product = await _productRepository.GetById(id);
+
+        if (product == null)
+            return false;
+
+        await _productRepository.DeleteById(product);
+
         return true;
     }
 }

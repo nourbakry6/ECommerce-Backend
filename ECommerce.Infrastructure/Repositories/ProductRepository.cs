@@ -15,38 +15,38 @@ namespace ECommerce.Infrastructure.Repositories
           _context= context;
           }
 
-        public void Add(Product product)
+        public async Task Add(Product product)
         {
-            _context.Products.Add(product);
-            _context.SaveChanges();
+             await _context.Products.AddAsync(product);
+             await _context.SaveChangesAsync();
         }
 
       
 
-        public List<Product> GetAll()
+        public async Task<List<Product>> GetAll()
         {
         //btruh a dbset taeit prodcut w btred klchi hka list mtl select * from prduct
-            return _context.Products
+            return await  _context.Products
             .Include(c=>c.Category)
-            .ToList();
+            .ToListAsync();
         }
 
-        public Product? GetById(int id)
+        public async Task<Product?> GetById(int id)
         {
-            return _context.Products
+            return await  _context.Products
             .Include(c=>c.Category)
             //first btred abl value byzbt chart mma3u bs iza m alaet btred exption so mnktb or default btrednull iza m laet
-            .FirstOrDefault(p=>p.Id == id);
+            .FirstOrDefaultAsync(p=>p.Id == id);
         }
 
-        public void Update(Product product)
+        public   Task Update(Product product)
         {    _context.Products.Update(product);
-            _context.SaveChanges();
+            return Task.CompletedTask;
         }
-        public void DeleteById(Product product)
+        public async Task DeleteById(Product product)
         {
             _context.Products.Remove(product);
-            _context.SaveChanges();
+           await  _context.SaveChangesAsync();
         }
     }
 }

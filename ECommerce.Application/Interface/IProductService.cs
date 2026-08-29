@@ -9,11 +9,11 @@ namespace ECommerce.Application.Interface
    public interface IProductService
     {
 
-        void Add(ProductCreateDTO productDTO);
-        List<ProductDTO> GetAll();
-        ProductDTO? GetById(int id);
-        bool Update(int id,ProductUpdateDTO productUpdate);
-        bool DeleteById(int id);
+        Task Add(ProductCreateDTO productDTO);
+        Task<List<ProductDTO>> GetAll();
+        Task<ProductDTO?> GetById(int id);
+        Task<bool> Update(int id, ProductUpdateDTO productUpdate);
+        Task<bool> DeleteById(int id);
 
     }
 }

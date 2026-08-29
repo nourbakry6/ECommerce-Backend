@@ -9,12 +9,12 @@ namespace ECommerce.Application.Interface
    public interface IOrderService
 
     {
-        List<OrderDTO> GetAllORder();
-        bool UpdateStatus(int  orderId,UpdateOrderStatusDTO updateOrderStatusDTO);
-        OrderDTO? GetByOrderId(int Orderid,int userid);
-        bool CancelOrder(int orderid,int userid);
-        List<OrderDTO> GetMyOrders(int userId);
-        bool Checkout(int UserId);
+        Task<List<OrderDTO>> GetAllOrder();
+        Task<bool> UpdateStatus(int orderId, UpdateOrderStatusDTO updateOrderStatusDTO);
+        Task<OrderDTO?> GetByOrderId(int orderId, int userId);
+        Task<bool> CancelOrder(int orderId, int userId);
+        Task<List<OrderDTO>> GetMyOrders(int userId);
+        Task<string?> Checkout(int userId);
 
 
     }

@@ -16,29 +16,29 @@ namespace ECommerce.API.Controllers
 
         [HttpGet]
         //iactionresult noe imeh l ha tnrak bdl ma ht list aw productt  laen mch druri ha ynrd hk
-        public IActionResult GetAll()
+        public async Task<IActionResult> GetAll()
         {
-            var products = _productService.GetAll();
+            var products = await _productService.GetAll();
             return Ok(products);
         }
         [Authorize(Roles = "Admin")]
         [HttpPost]
-        public IActionResult Add(ProductCreateDTO products) {
-            _productService.Add(products);
+        public async Task<IActionResult> Add(ProductCreateDTO products) {
+           await _productService.Add(products);
             return Ok(products);
         }
         [HttpGet("{id}")]
-        public IActionResult GetById(int id) {
-            var product = _productService.GetById(id);
+        public async Task<IActionResult> GetById(int id) {
+            var product = await _productService.GetById(id);
             if (product == null) return NotFound();
             return Ok(product);
         }
         [Authorize(Roles = "Admin")]
         [HttpPut("{id}")]
-        public IActionResult Update(int id, ProductUpdateDTO products)
+        public async Task<IActionResult> Update(int id, ProductUpdateDTO products)
         {
 
-            var result = _productService.Update(id, products);
+            var result = await _productService.Update(id, products);
 
             if (!result)
                 return NotFound();
@@ -47,8 +47,8 @@ namespace ECommerce.API.Controllers
         }
         [Authorize(Roles = "Admin")]
         [HttpDelete("{id}")]
-        public IActionResult Delete(int id){
-        var product=_productService.DeleteById(id);
+        public async Task<IActionResult> Delete(int id){
+        var product= await _productService.DeleteById(id);
        if(!product)return NotFound();
       
             return Ok();

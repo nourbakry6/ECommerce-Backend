@@ -8,11 +8,16 @@ namespace ECommerce.Application.Interface
 {
    public interface IOrderRepository
     {
-        List<Order> GetAllOrder();
-        Order? GetByOrderId(int user);
-        void CancelOrder(Order order);
-        List<Order> GetMyOrders(int userId);
-        void AddOrder(Order order);
-        void UpdateOrder(Order order);
+        Task<List<Order>> GetAllOrder();
+
+        Task<Order?> GetByOrderId(int orderId);
+
+        Task<List<Order>> GetMyOrders(int userId);
+
+        Task AddOrder(Order order);
+
+        Task UpdateOrder(Order order);
+
+        Task CancelOrder(Order order);
     }
 }

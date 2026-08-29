@@ -2,28 +2,30 @@
 using ECommerce.Application.Interface;
 using ECommerce.Domain.entites;
 using ECommerce.Domain.enums;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace ECommerce.Application.Services
 {
     public class OrderService : IOrderService
     {
-    private readonly IOrderRepository _orderRepository;
-        private readonly ICartService _cartService1;
-        private readonly IProductRepository _productService;
-    public OrderService(IOrderRepository orderRepository,ICartService cart,IProductRepository productService)
+        private readonly IOrderRepository _orderRepository;
+        private readonly ICartRepository _cartRepository;
+        private readonly IProductRepository _productRepository;
+        private readonly IUnitOfWork _unitOfWork;
+        public OrderService(
+       IOrderRepository orderRepository,
+    ICartRepository cartRepository,
+       IProductRepository productRepository,
+       IUnitOfWork unitOfWork)
         {
             _orderRepository = orderRepository;
-           _cartService1 = cart;
-            _productService = productService;
-          
+            _cartRepository= cartRepository;
+            _productRepository = productRepository;
+            _unitOfWork = unitOfWork;
         }
 
-        public bool CancelOrder(int orderId, int userId)
+        public async Task<bool> CancelOrder(int orderId, int userId)
         {
-            var order = _orderRepository.GetByOrderId(orderId);
+            var order = await _orderRepository.GetByOrderId(orderId);
 
             if (order == null)
                 return false;
@@ -36,126 +38,171 @@ namespace ECommerce.Application.Services
 
             order.Status = OrderStatus.Cancelled;
 
-            _orderRepository.CancelOrder(order);
+            await _orderRepository.CancelOrder(order);
 
             return true;
         }
-
-        public bool Checkout(int UserId)
+        public async Task<string?> Checkout(int userId)
         {
-            var cart = _cartService1.GetByUserId(UserId);
-            if (cart == null || cart.cartItems == null) return false;
-            if (!cart.cartItems.Any()) return false;
-            decimal totalamount = 0;
-            var Order = new Order
+            var cart = await _cartRepository.GetByUserId(userId);
+
+            if (cart == null)
+                return "Cart not found.";
+
+            if (cart.CartItems == null || !cart.CartItems.Any())
+                return "Cart is empty.";
+
+            await _unitOfWork.BeginTransactionAsync();
+
+            try
             {
-                UserId = UserId,
-                
-                OrderDate = DateTime.Now,
-                OrderItems = new List<OrderItem>()
+                decimal totalAmount = 0;
 
-            };
-            foreach(var item in cart.cartItems){
-           var  product=_productService.GetById(item.ProductId);
-            if(product == null) return false;
-                if (product.Stock < item.Quantity) return false;
-                var price = product.Price;
-                var orderitem = new OrderItem
+                var order = new Order
                 {
-                    ProductId = product.Id,
-                    Price = price,
-                    Quantity = item.Quantity,
+                    UserId = userId,
+                    OrderDate = DateTime.Now,
+                    OrderItems = new List<OrderItem>()
                 };
-               Order.OrderItems.Add(orderitem);
-               totalamount+=price*item.Quantity;
-                product.Stock -= item.Quantity;
-            }
-            Order.TotalAmount = totalamount;
-            _orderRepository.AddOrder(Order);
-            _cartService1.ClearCart(UserId);
-            return true;
 
+                foreach (var item in cart.CartItems)
+                {
+                    var product = await _productRepository.GetById(item.ProductId);
+
+                    if (product == null)
+                        return $"Product with ID {item.ProductId} not found.";
+
+                    if (product.Stock < item.Quantity)
+                        return $"Not enough stock for product: {product.Name}.";
+
+                    var orderItem = new OrderItem
+                    {
+                        ProductId = product.Id,
+                        Price = product.Price,
+                        Quantity = item.Quantity
+                    };
+
+                    order.OrderItems.Add(orderItem);
+
+                    totalAmount += product.Price * item.Quantity;
+
+                    product.Stock -= item.Quantity;
+
+                    await _productRepository.Update(product);
+                }
+
+                order.TotalAmount = totalAmount;
+
+                await _orderRepository.AddOrder(order);
+
+                await _cartRepository.ClearCart(cart.CartItems);
+
+                await _unitOfWork.SaveChangesAsync();
+
+                await _unitOfWork.CommitTransactionAsync();
+
+                return null;
+            }
+            catch (Exception ex)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+
+                return $"Checkout failed: {ex.Message}";
+            }
         }
 
-        public List<OrderDTO> GetAllORder()
+
+        public async Task<List<OrderDTO>> GetAllOrder()
         {
-            var order = _orderRepository.GetAllOrder();
-            var orderdto = order.Select(p => new OrderDTO
+            var orders = await _orderRepository.GetAllOrder();
+
+            var orderDto = orders.Select(p => new OrderDTO
             {
                 Id = p.Id,
                 TotalAmount = p.TotalAmount,
                 OrderDate = p.OrderDate,
+                Status = p.Status,
+
                 OrderItems = p.OrderItems.Select(o => new OrderItemDTO
                 {
                     ProductId = o.ProductId,
                     ProdactName = o.Product.Name,
-                    Price = o.Price
-
-
+                    Price = o.Price,
+                    Quantity = o.Quantity
                 }).ToList()
 
             }).ToList();
-            return orderdto;
 
+            return orderDto;
         }
 
-        public OrderDTO? GetByOrderId(int orderid,int UserId)
+        public async Task<OrderDTO?> GetByOrderId(int orderId, int userId)
         {
-            var orderitem = _orderRepository.GetByOrderId(orderid);
-            if (orderitem == null)
+            var order = await _orderRepository.GetByOrderId(orderId);
+
+            if (order == null)
                 return null;
-            if (orderitem.UserId != UserId) return null;
+
+            if (order.UserId != userId)
+                return null;
+
             return new OrderDTO
             {
-                Status=orderitem.Status,
-                Id = orderitem.Id,
-                OrderDate = orderitem.OrderDate,
-                TotalAmount = orderitem.TotalAmount,
-                OrderItems = orderitem.OrderItems.Select(p => new OrderItemDTO
+                Status = order.Status,
+                Id = order.Id,
+                OrderDate = order.OrderDate,
+                TotalAmount = order.TotalAmount,
+
+                OrderItems = order.OrderItems.Select(p => new OrderItemDTO
                 {
                     Id = p.Id,
                     ProductId = p.ProductId,
                     ProdactName = p.Product.Name,
                     Quantity = p.Quantity,
-                    Price = p.Price,
-
+                    Price = p.Price
                 }).ToList()
-
-
             };
-
         }
 
-        public List<OrderDTO> GetMyOrders(int userId)
+        public async Task<List<OrderDTO>> GetMyOrders(int userId)
         {
-       
+            var orderList = await _orderRepository.GetMyOrders(userId);
 
-        var orderlist=_orderRepository.GetMyOrders(userId);
-            var orderdto = orderlist.Select(p => new OrderDTO {
+            var orderDto = orderList.Select(p => new OrderDTO
+            {
                 Id = p.Id,
                 OrderDate = p.OrderDate,
-                Status =p.Status,
+                Status = p.Status,
                 TotalAmount = p.TotalAmount,
-                OrderItems = p.OrderItems.Select(p => new OrderItemDTO {
-                    ProductId = p.ProductId,
-                    Id = p.Id,
-                    ProdactName = p.Product.Name,
-                    Quantity = p.Quantity,
-                    Price = p.Price,
+
+                OrderItems = p.OrderItems.Select(item => new OrderItemDTO
+                {
+                    ProductId = item.ProductId,
+                    Id = item.Id,
+                    ProdactName = item.Product.Name,
+                    Quantity = item.Quantity,
+                    Price = item.Price
                 }).ToList()
+
             }).ToList();
-            return orderdto;
+
+            return orderDto;
         }
 
-        public bool UpdateStatus(int orderId, UpdateOrderStatusDTO updateOrderStatusDTO)
+        public async Task<bool> UpdateStatus(
+            int orderId,
+            UpdateOrderStatusDTO updateOrderStatusDTO)
         {
-            var order=_orderRepository.GetByOrderId(orderId);
-            if (order == null) return false;
-           
-            order.Status = updateOrderStatusDTO.status;
-            _orderRepository.UpdateOrder(order);
-            return true;
+            var order = await _orderRepository.GetByOrderId(orderId);
 
+            if (order == null)
+                return false;
+
+            order.Status = updateOrderStatusDTO.status;
+
+            await _orderRepository.UpdateOrder(order);
+
+            return true;
         }
     }
 }

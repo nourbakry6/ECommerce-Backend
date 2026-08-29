@@ -8,12 +8,17 @@ namespace ECommerce.Application.Interface
 {
     public interface ICartRepository
     {
-        Cart? GetByUserId(int id);
-        void ItemUpdate(CartItem cartItem);
-        void ItemDelete(CartItem cartItem);
-        void ClearCart(IEnumerable<CartItem> cartItem);
-        void ItemAdd(CartItem cartItem);
-        CartItem? GetItemById(int id);
+        Task<Cart?> GetByUserId(int id);
+
+        Task ItemUpdate(CartItem cartItem);
+
+        Task ItemDelete(CartItem cartItem);
+
+        Task ClearCart(IEnumerable<CartItem> cartItems);
+
+        Task ItemAdd(CartItem cartItem);
+
+        Task<CartItem?> GetItemById(int id);
 
     }
 }

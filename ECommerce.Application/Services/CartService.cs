@@ -1,71 +1,94 @@
 ﻿using ECommerce.Application.DTO;
 using ECommerce.Application.Interface;
 using ECommerce.Domain.entites;
-using System;
-using System.Collections.Generic;
-using System.Text;
-
 
 namespace ECommerce.Application.Services
 {
     public class CartService : ICartService
     {
         private readonly ICartRepository _cartRepository;
-        private readonly IProductRepository productRepository;
-        public CartService(ICartRepository cartRepository, IProductRepository productRepository )
+        private readonly IProductRepository _productRepository;
+      private readonly IUnitOfWork _unitOfWork;
+
+        public CartService(
+            ICartRepository cartRepository,
+            IProductRepository productRepository,
+            IUnitOfWork unitOfWork)
         {
             _cartRepository = cartRepository;
-            this.productRepository = productRepository;
+            _productRepository = productRepository;
+         _unitOfWork= unitOfWork;
         }
 
-        public void AddItem(int userid, CartItemAddDTO cartItemAdd)
+        public async Task<string?> AddItem(
+     int userId,
+     CartItemAddDTO cartItemAdd)
         {
-            var item =_cartRepository.GetByUserId(userid);
+            var cart = await _cartRepository.GetByUserId(userId);
+
+            if (cart == null)
+                return "Cart not found.";
+
+            var product = await _productRepository.GetById(
+                cartItemAdd.ProductId);
+
+            if (product == null)
+                return "Product not found.";
+
+            var cartItem = new CartItem
+            {
+                CartId = cart.Id,
+                ProductId = product.Id,
+                Quantity = cartItemAdd.Quantity
+            };
+
+            await _cartRepository.ItemAdd(cartItem);
+            await _unitOfWork.SaveChangesAsync();
+
+            return null;
+        }
+
+        public async Task<bool> ClearCart(int userId)
+        {
+            var cart = await _cartRepository.GetByUserId(userId);
+
+            if (cart == null)
+                return false;
+
+            await _cartRepository.ClearCart(cart.CartItems);
+
+            await _unitOfWork.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> DeleteItem(int itemId)
+        {
+            var item = await _cartRepository.GetItemById(itemId);
 
             if (item == null)
-                throw new Exception("Cart not found");
+                return false;
 
-            var product = productRepository.GetById(cartItemAdd.ProductId);
-            if (product == null)
-                throw new Exception("Product not found");
-            var cartitem = new CartItem { 
-                CartId=item.Id,
-                ProductId=cartItemAdd.ProductId,
-               
-                Quantity = cartItemAdd.Quantity,
-            };
-            _cartRepository.ItemAdd(cartitem);
+            await _cartRepository.ItemDelete(item);
 
+         
 
-        }
-
-        public bool ClearCart(int userid)
-        {
-            var cart= _cartRepository.GetByUserId(userid);
-            if (cart == null) return false;
-            _cartRepository.ClearCart(cart.CartItems);
-            return true;
-
-        }
-
-        public bool DeleteItem(int itemid)
-        {
-           var item=_cartRepository.GetItemById(itemid);
-            if (item == null) return false;
-            _cartRepository.ItemDelete(item);
             return true;
         }
 
-        public CartDTO? GetByUserId(int userId)
+        public async Task<CartDTO?> GetByUserId(int userId)
         {
-            var item = _cartRepository.GetByUserId(userId);
-            if (item == null) return null;
+            var cart = await _cartRepository.GetByUserId(userId);
+
+            if (cart == null)
+                return null;
+
             return new CartDTO
             {
-                Id = item.Id,
+                Id = cart.Id,
 
-                cartItems = item.CartItems.Select(x => new CartItemDTO
-                {   ID= x.Id,
+                cartItems = cart.CartItems.Select(x => new CartItemDTO
+                {
+                    ID = x.Id,
                     ProductId = x.ProductId,
                     Quantity = x.Quantity,
                     ProductName = x.Product.Name,
@@ -73,15 +96,23 @@ namespace ECommerce.Application.Services
                     IgammeUrl = x.Product.ImageUrl
                 }).ToList()
             };
-
         }
 
-        public bool UpdateItem(int itemid, CartItemUpdate cartItemUpdate)
+        public async Task<bool> UpdateItem(
+            int itemId,
+            CartItemUpdate cartItemUpdate)
         {
-            var item = _cartRepository.GetItemById(itemid);
-            if (item == null) return false;
+            var item = await _cartRepository.GetItemById(itemId);
+
+            if (item == null)
+                return false;
+
             item.Quantity = cartItemUpdate.Quantity;
-            _cartRepository.ItemUpdate(item);
+
+            await _cartRepository.ItemUpdate(item);
+
+            
+
             return true;
         }
     }

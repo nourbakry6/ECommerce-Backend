@@ -2,59 +2,55 @@
 using ECommerce.Domain.entites;
 using ECommerce.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace ECommerce.Infrastructure.Repositories
 {
-
-    public class CartRepository :ICartRepository
+    public class CartRepository : ICartRepository
     {
         private readonly ApplicationDbContext _context;
-        public CartRepository(ApplicationDbContext context) {
-        _context = context;
+
+        public CartRepository(ApplicationDbContext context)
+        {
+            _context = context;
         }
 
-       public void ClearCart(IEnumerable<CartItem> cartItem)
+        public  Task ClearCart(IEnumerable<CartItem> cartItems)
         {
-            
-
-            _context.CartItems.RemoveRange(cartItem);
-
-            _context.SaveChanges();
+            _context.CartItems.RemoveRange(cartItems);
+            return Task.CompletedTask;
         }
 
-        public Cart? GetByUserId(int userId)
+        public async Task<Cart?> GetByUserId(int userId)
         {
-            return _context.Carts
+            return await _context.Carts
                 .Include(c => c.CartItems)
                 .ThenInclude(ci => ci.Product)
-                .FirstOrDefault(c => c.UserId == userId);
+                .FirstOrDefaultAsync(c => c.UserId == userId);
         }
 
-        public CartItem? GetItemById(int id)
+        public async Task<CartItem?> GetItemById(int id)
         {
-            return _context.CartItems.Include(p=>p.Product).FirstOrDefault(p=>p.Id==id);
+            return await _context.CartItems
+                .Include(p => p.Product)
+                .FirstOrDefaultAsync(p => p.Id == id);
         }
 
-        public void ItemAdd(CartItem cartItem)
+        public async Task ItemAdd(CartItem cartItem)
         {
-             _context.CartItems.Add(cartItem);
-             _context.SaveChanges();
-
+            _context.CartItems.Add(cartItem);
+            await _context.SaveChangesAsync();
         }
 
-        public void ItemDelete(CartItem cartItem)
+        public async Task ItemDelete(CartItem cartItem)
         {
             _context.CartItems.Remove(cartItem);
-            _context.SaveChanges();
+            await _context.SaveChangesAsync();
         }
 
-        public void ItemUpdate(CartItem cartItem)
+        public async Task ItemUpdate(CartItem cartItem)
         {
             _context.CartItems.Update(cartItem);
-            _context.SaveChanges();
+            await _context.SaveChangesAsync();
         }
     }
 }

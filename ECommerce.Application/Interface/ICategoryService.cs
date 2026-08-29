@@ -6,10 +6,15 @@ namespace ECommerce.Application.Interface
 {
     public interface ICategoryService
     {
-        List<CategoryDTO> GetAll();
-        void Add(CategoryCreateDTO categoryDTO);
-        bool Update(int id, CategoryUpdateDTO categoryUpdateDTO);
-        bool Delete(int id);
-        CategoryDetailsDTO? GetById(int id);
+
+        Task<List<CategoryDTO>> GetAll();
+
+        Task Add(CategoryCreateDTO categoryDTO);
+
+        Task<bool> Update(int id, CategoryUpdateDTO categoryUpdateDTO);
+
+        Task<bool> Delete(int id);
+
+        Task<CategoryDetailsDTO?> GetById(int id);
     }
 }

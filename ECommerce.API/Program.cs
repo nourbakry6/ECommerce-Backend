@@ -99,6 +99,7 @@ namespace ECommerce.API
             builder.Services.AddScoped<IOrderRepository,OrderRepository>();
             builder.Services.AddScoped<IOrderService, OrderService>();
 
+            builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
             // btkhd asp.core kif ytha2a2 msh jwt
 
             builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

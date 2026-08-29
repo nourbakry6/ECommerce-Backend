@@ -1,7 +1,6 @@
 ﻿using ECommerce.Application.DTO;
 using ECommerce.Application.Interface;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
@@ -10,69 +9,101 @@ namespace ECommerce.API.Controllers
     [Authorize]
     [ApiController]
     [Route("api/[controller]")]
-    
     public class OrderController : ControllerBase
     {
         private readonly IOrderService _orderService;
+
         public OrderController(IOrderService orderService)
         {
-            {
-                _orderService = orderService;
-            }
-        }
-        public int getuserid()
-        {
-            return int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            _orderService = orderService;
         }
 
-        [HttpPost("chechkoout")]
-        public IActionResult Chechkout()
+        private int GetUserId()
         {
-            var userid = getuserid();
-            var order = _orderService.Checkout(userid);
-            if (!order) return BadRequest("no item");
-            return Ok(order);
+            return int.Parse(
+                User.FindFirst(ClaimTypes.NameIdentifier)!.Value
+            );
+        }
+
+        [HttpPost("checkout")]
+        public async Task<IActionResult> Checkout()
+        {
+            var userId = GetUserId();
+
+            var result = await _orderService.Checkout(userId);
+
+            if (result != null)
+                return BadRequest(result);
+
+            return Ok("Order created successfully.");
         }
 
         [HttpGet("my-orders")]
-        public IActionResult GetMyOrder()
+        public async Task<IActionResult> GetMyOrder()
         {
-            var userid = getuserid();
-            var order = _orderService.GetMyOrders(userid);
-            return Ok(order);
-        }
-        [HttpGet("order{orderid}")]
-        public IActionResult GetOrders(int orderid)
-        {
-            var userid = getuserid();
-            var order = _orderService.GetByOrderId(orderid,userid);
-            if (order == null) return BadRequest();
-            return Ok(order);
+            var userId = GetUserId();
 
+            var orders = await _orderService.GetMyOrders(userId);
+
+            return Ok(orders);
         }
+
+        [HttpGet("order/{orderid}")]
+        public async Task<IActionResult> GetOrder(int orderid)
+        {
+            var userId = GetUserId();
+
+            var order = await _orderService.GetByOrderId(
+                orderid,
+                userId
+            );
+
+            if (order == null)
+                return NotFound();
+
+            return Ok(order);
+        }
+
         [Authorize(Roles = "Admin")]
         [HttpPatch("{orderid}/status")]
-        public IActionResult UpdateOrderStatus(int orderid, UpdateOrderStatusDTO updateOrderStatusDTO)
+        public async Task<IActionResult> UpdateOrderStatus(
+            int orderid,
+            UpdateOrderStatusDTO updateOrderStatusDTO)
         {
-            
-                var userid = getuserid();
-                var order = _orderService.UpdateStatus(orderid, updateOrderStatusDTO);
-                if (!order) return BadRequest();
-                return Ok("Order status updated successfully");
-            
+            var result = await _orderService.UpdateStatus(
+                orderid,
+                updateOrderStatusDTO
+            );
+
+            if (!result)
+                return NotFound();
+
+            return Ok("Order status updated successfully.");
         }
-        [HttpPatch("order{orderid}/cancelled")]
-        public IActionResult CancelOrder(int orderid){
-        var userid = getuserid();
-        var order =_orderService.CancelOrder(orderid, userid);
-            if (order == false) return BadRequest("you can not cancelled the order!");
-            else return Ok("the order is cancelled");
+
+        [HttpPatch("order/{orderid}/cancelled")]
+        public async Task<IActionResult> CancelOrder(int orderid)
+        {
+            var userId = GetUserId();
+
+            var result = await _orderService.CancelOrder(
+                orderid,
+                userId
+            );
+
+            if (!result)
+                return BadRequest("You cannot cancel this order.");
+
+            return Ok("The order is cancelled.");
         }
-        [Authorize(Roles="Admin")]
-        [HttpGet("Get-All-Order")]
-        public IActionResult GetAllOrder(){
-            var order = _orderService.GetAllORder();
-            return Ok(order);
+
+        [Authorize(Roles = "Admin")]
+        [HttpGet("all")]
+        public async Task<IActionResult> GetAllOrder()
+        {
+            var orders = await _orderService.GetAllOrder();
+
+            return Ok(orders);
         }
     }
 }
