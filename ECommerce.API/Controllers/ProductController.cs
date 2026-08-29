@@ -30,7 +30,7 @@ namespace ECommerce.API.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id) {
             var product = await _productService.GetById(id);
-            if (product == null) return NotFound();
+            
             return Ok(product);
         }
         [Authorize(Roles = "Admin")]
@@ -40,8 +40,7 @@ namespace ECommerce.API.Controllers
 
             var result = await _productService.Update(id, products);
 
-            if (!result)
-                return NotFound();
+         
 
             return Ok();
         }
@@ -49,7 +48,7 @@ namespace ECommerce.API.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id){
         var product= await _productService.DeleteById(id);
-       if(!product)return NotFound();
+     
       
             return Ok();
         }

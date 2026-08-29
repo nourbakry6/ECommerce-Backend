@@ -32,8 +32,7 @@ namespace ECommerce.API.Controllers
 
             var cart = await _cartService.GetByUserId(userId);
 
-            if (cart == null)
-                return NotFound("Cart not found.");
+        
 
             return Ok(cart);
         }
@@ -45,7 +44,7 @@ namespace ECommerce.API.Controllers
             var userId = GetUserId();
 
           var error=  await _cartService.AddItem(userId, cartItem);
-            if (error != null) return BadRequest(error);
+         
 
             return Ok(cartItem);
         }
@@ -59,8 +58,7 @@ namespace ECommerce.API.Controllers
                 itemId,
                 cartItem);
 
-            if (!result)
-                return NotFound();
+          
 
             return Ok();
         }
@@ -70,9 +68,7 @@ namespace ECommerce.API.Controllers
         {
             var result = await _cartService.DeleteItem(itemId);
 
-            if (!result)
-                return NotFound();
-
+            
             return Ok();
         }
 
@@ -83,8 +79,7 @@ namespace ECommerce.API.Controllers
 
             var result = await _cartService.ClearCart(userId);
 
-            if (!result)
-                return NotFound("Cart not found.");
+         
 
             return Ok("Cart cleared successfully.");
         }

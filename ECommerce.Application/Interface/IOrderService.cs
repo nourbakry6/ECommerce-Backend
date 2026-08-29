@@ -14,7 +14,7 @@ namespace ECommerce.Application.Interface
         Task<OrderDTO?> GetByOrderId(int orderId, int userId);
         Task<bool> CancelOrder(int orderId, int userId);
         Task<List<OrderDTO>> GetMyOrders(int userId);
-        Task<string?> Checkout(int userId);
+        Task<bool> Checkout(int userId);
 
 
     }

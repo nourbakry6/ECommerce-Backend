@@ -32,8 +32,7 @@ namespace ECommerce.API.Controllers
 
             var result = await _orderService.Checkout(userId);
 
-            if (result != null)
-                return BadRequest(result);
+            
 
             return Ok("Order created successfully.");
         }
@@ -58,8 +57,7 @@ namespace ECommerce.API.Controllers
                 userId
             );
 
-            if (order == null)
-                return NotFound();
+            
 
             return Ok(order);
         }
@@ -75,8 +73,7 @@ namespace ECommerce.API.Controllers
                 updateOrderStatusDTO
             );
 
-            if (!result)
-                return NotFound();
+          
 
             return Ok("Order status updated successfully.");
         }
@@ -91,8 +88,7 @@ namespace ECommerce.API.Controllers
                 userId
             );
 
-            if (!result)
-                return BadRequest("You cannot cancel this order.");
+        
 
             return Ok("The order is cancelled.");
         }

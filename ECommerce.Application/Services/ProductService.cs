@@ -50,7 +50,8 @@ public class ProductService : IProductService
         var product = await _productRepository.GetById(id);
 
         if (product == null)
-            return null;
+            throw new KeyNotFoundException(
+              $"Product with ID {id} not found.");
 
         return new ProductDTO
         {
@@ -69,7 +70,8 @@ public class ProductService : IProductService
         var product = await _productRepository.GetById(id);
 
         if (product == null)
-            return false;
+            throw new KeyNotFoundException(
+          $"Product with ID {id} not found.");
 
         product.Name = productDTO.Name;
         product.Description = productDTO.Description;
@@ -88,7 +90,8 @@ public class ProductService : IProductService
         var product = await _productRepository.GetById(id);
 
         if (product == null)
-            return false;
+            throw new KeyNotFoundException(
+          $"Product with ID {id} not found.");
 
         await _productRepository.DeleteById(product);
 

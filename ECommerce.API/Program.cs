@@ -1,4 +1,5 @@
 
+using ECommerce.API.Middleware;
 using ECommerce.Application.Interface;
 using ECommerce.Application.Services;
 using ECommerce.Infrastructure.Data;
@@ -98,8 +99,9 @@ namespace ECommerce.API
             //////////////////////////////Order//////////////////////////////
             builder.Services.AddScoped<IOrderRepository,OrderRepository>();
             builder.Services.AddScoped<IOrderService, OrderService>();
-
+            //hyda lal trasaction
             builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+
             // btkhd asp.core kif ytha2a2 msh jwt
 
             builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -149,6 +151,8 @@ namespace ECommerce.API
 
                
             }
+
+            app.UseMiddleware<ExceptionMiddleware>();
 
             app.UseHttpsRedirection();
 

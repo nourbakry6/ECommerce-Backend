@@ -33,7 +33,8 @@ namespace ECommerce.Application.Services
             var category = await _categoryRepository.GetById(id);
 
             if (category == null)
-                return false;
+                throw new KeyNotFoundException(
+          $"Category with ID {id} not found.");
 
             await _categoryRepository.Delete(category);
          
@@ -56,7 +57,8 @@ namespace ECommerce.Application.Services
             var category = await _categoryRepository.GetById(id);
 
             if (category == null)
-                return null;
+                throw new KeyNotFoundException(
+          $"Category with ID {id} not found.");
 
             return new CategoryDetailsDTO
             {
@@ -78,7 +80,8 @@ namespace ECommerce.Application.Services
             var category = await _categoryRepository.GetById(id);
 
             if (category == null)
-                return false;
+                throw new KeyNotFoundException(
+          $"Category with ID {id} not found.");
 
             category.Name = categoryUpdateDTO.Name;
 

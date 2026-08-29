@@ -28,13 +28,17 @@ namespace ECommerce.Application.Services
             var order = await _orderRepository.GetByOrderId(orderId);
 
             if (order == null)
-                return false;
+                throw new KeyNotFoundException(
+                    $"Order with ID {orderId} not found.");
 
             if (order.UserId != userId)
-                return false;
+                throw new UnauthorizedAccessException(
+                    "You are not allowed to cancel this order.");
 
             if (order.Status != OrderStatus.Pending)
-                return false;
+                throw new InvalidOperationException(
+                    "Only pending orders can be cancelled.");
+
 
             order.Status = OrderStatus.Cancelled;
 
@@ -42,15 +46,15 @@ namespace ECommerce.Application.Services
 
             return true;
         }
-        public async Task<string?> Checkout(int userId)
+        public async Task<bool> Checkout(int userId)
         {
             var cart = await _cartRepository.GetByUserId(userId);
 
             if (cart == null)
-                return "Cart not found.";
+                throw new KeyNotFoundException("Cart not found.");
 
             if (cart.CartItems == null || !cart.CartItems.Any())
-                return "Cart is empty.";
+                throw new InvalidOperationException("Cart is empty.");
 
             await _unitOfWork.BeginTransactionAsync();
 
@@ -70,10 +74,13 @@ namespace ECommerce.Application.Services
                     var product = await _productRepository.GetById(item.ProductId);
 
                     if (product == null)
-                        return $"Product with ID {item.ProductId} not found.";
+                        throw new KeyNotFoundException(
+                            $"Product with ID {item.ProductId} not found.");
 
                     if (product.Stock < item.Quantity)
-                        return $"Not enough stock for product: {product.Name}.";
+                        throw new InvalidOperationException(
+                            $"Not enough stock for product: {product.Name}.");
+
 
                     var orderItem = new OrderItem
                     {
@@ -101,13 +108,13 @@ namespace ECommerce.Application.Services
 
                 await _unitOfWork.CommitTransactionAsync();
 
-                return null;
+                return true;
             }
             catch (Exception ex)
             {
                 await _unitOfWork.RollbackTransactionAsync();
 
-                return $"Checkout failed: {ex.Message}";
+                throw;
             }
         }
 
@@ -139,12 +146,13 @@ namespace ECommerce.Application.Services
         public async Task<OrderDTO?> GetByOrderId(int orderId, int userId)
         {
             var order = await _orderRepository.GetByOrderId(orderId);
-
             if (order == null)
-                return null;
+                throw new KeyNotFoundException(
+                    $"Order with ID {orderId} not found.");
 
             if (order.UserId != userId)
-                return null;
+                throw new UnauthorizedAccessException(
+                    "You are not allowed to access this order.");
 
             return new OrderDTO
             {
@@ -196,7 +204,7 @@ namespace ECommerce.Application.Services
             var order = await _orderRepository.GetByOrderId(orderId);
 
             if (order == null)
-                return false;
+                throw new KeyNotFoundException($"Order with ID {orderId} not found.");
 
             order.Status = updateOrderStatusDTO.status;
 

@@ -40,8 +40,6 @@ namespace ECommerce.API.Controllers
         {
             var result = await _categoryService.Delete(id);
 
-            if (!result)
-                return NotFound();
 
             return Ok();
         }
@@ -56,8 +54,7 @@ namespace ECommerce.API.Controllers
                 id,
                 categoryUpdateDTO);
 
-            if (!result)
-                return NotFound();
+          
 
             return Ok();
         }
@@ -67,8 +64,7 @@ namespace ECommerce.API.Controllers
         {
             var category = await _categoryService.GetById(id);
 
-            if (category == null)
-                return NotFound();
+          
 
             return Ok(category);
         }

@@ -26,14 +26,17 @@ namespace ECommerce.Application.Services
         {
             var cart = await _cartRepository.GetByUserId(userId);
 
+
             if (cart == null)
-                return "Cart not found.";
+                throw new KeyNotFoundException(
+                    $"Cart for user with ID {userId} not found.");
 
             var product = await _productRepository.GetById(
                 cartItemAdd.ProductId);
 
             if (product == null)
-                return "Product not found.";
+                throw new KeyNotFoundException(
+                    $"Product with ID {cartItemAdd.ProductId} not found.");
 
             var cartItem = new CartItem
             {
@@ -53,7 +56,8 @@ namespace ECommerce.Application.Services
             var cart = await _cartRepository.GetByUserId(userId);
 
             if (cart == null)
-                return false;
+                throw new KeyNotFoundException(
+                $"Cart for user with ID {userId} not found.");
 
             await _cartRepository.ClearCart(cart.CartItems);
 
@@ -65,8 +69,11 @@ namespace ECommerce.Application.Services
         {
             var item = await _cartRepository.GetItemById(itemId);
 
-            if (item == null)
-                return false;
+            
+                if (item == null)
+                    throw new KeyNotFoundException(
+                        $"Cart item with ID {itemId} not found.");
+
 
             await _cartRepository.ItemDelete(item);
 
@@ -80,7 +87,8 @@ namespace ECommerce.Application.Services
             var cart = await _cartRepository.GetByUserId(userId);
 
             if (cart == null)
-                return null;
+                throw new KeyNotFoundException(
+                   $"Cart for user with ID {userId} not found.");
 
             return new CartDTO
             {
@@ -105,7 +113,8 @@ namespace ECommerce.Application.Services
             var item = await _cartRepository.GetItemById(itemId);
 
             if (item == null)
-                return false;
+                throw new KeyNotFoundException(
+                      $"Cart item with ID {itemId} not found.");
 
             item.Quantity = cartItemUpdate.Quantity;
 
