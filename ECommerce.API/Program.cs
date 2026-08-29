@@ -132,10 +132,15 @@ namespace ECommerce.API
             //nhna bdna nst3ml usermnge w rolemnger mra whe awl ma ychgtchl project ta na3mols seeder so emlan scope
             using (var scope = app.Services.CreateScope())
             {//byftah endi maseha mu2akate
+            //bdnan nt2kd enu db mwjud abl seedr
+                var dbContext = scope.ServiceProvider
+           .GetRequiredService<ApplicationDbContext>();
 
-            //usermanger class jhex bi alb asp identity ta a3mol create delete... lal user applicatiioniser y3ni
+                await dbContext.Database.MigrateAsync();
+                //usermanger class jhex bi alb asp identity ta a3mol create delete... lal user applicatiioniser y3ni
 
-            //scope.serviceprovider mn hl maseha jbli hl service li hwh... usermanger
+
+                //scope.serviceprovider mn hl maseha jbli hl service li hwh... usermanger
                 var userManager = scope.ServiceProvider
     .GetRequiredService<UserManager<ApplicationUser>>();
 
