@@ -35,6 +35,14 @@ namespace ECommerce.Infrastructure.Repositories
                 .FirstOrDefaultAsync(p => p.Id == id);
         }
 
+        public async Task<int?> GetUserIdByItemId(int itemId)
+        {
+            return await _context.CartItems
+                .Where(ci => ci.Id == itemId)
+                .Select(ci => (int?)ci.Cart.UserId)
+                .FirstOrDefaultAsync();
+        }
+
         public async Task ItemAdd(CartItem cartItem)
         {
             _context.CartItems.Add(cartItem);

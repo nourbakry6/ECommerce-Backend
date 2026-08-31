@@ -1,6 +1,8 @@
 ﻿using ECommerce.Application.DTO;
 using ECommerce.Application.Interface;
 using ECommerce.Domain.entites;
+using Microsoft.Extensions.Caching.Distributed;
+using System.Text.Json;
 
 namespace ECommerce.Application.Services
 {
@@ -9,16 +11,20 @@ namespace ECommerce.Application.Services
         private readonly ICartRepository _cartRepository;
         private readonly IProductRepository _productRepository;
       private readonly IUnitOfWork _unitOfWork;
+        private readonly IDistributedCache _cache;
 
         public CartService(
             ICartRepository cartRepository,
             IProductRepository productRepository,
-            IUnitOfWork unitOfWork)
+            IUnitOfWork unitOfWork,
+            IDistributedCache distributedCache)
         {
             _cartRepository = cartRepository;
             _productRepository = productRepository;
          _unitOfWork= unitOfWork;
-        }
+         _cache= distributedCache;
+        } 
+        //hn redis msh mtl poduct  wcategory lkl ha ybyn endn nfs chi la hn ha tkun hsab userid
 
         public async Task<string?> AddItem(
      int userId,
@@ -46,8 +52,8 @@ namespace ECommerce.Application.Services
             };
 
             await _cartRepository.ItemAdd(cartItem);
-            await _unitOfWork.SaveChangesAsync();
-
+            
+            await _cache.RemoveAsync($"cart:user:{userId}");
             return null;
         }
 
@@ -62,6 +68,8 @@ namespace ECommerce.Application.Services
             await _cartRepository.ClearCart(cart.CartItems);
 
             await _unitOfWork.SaveChangesAsync();
+            await _cache.RemoveAsync($"cart:user:{userId}");
+
             return true;
         }
 
@@ -73,24 +81,44 @@ namespace ECommerce.Application.Services
                 if (item == null)
                     throw new KeyNotFoundException(
                         $"Cart item with ID {itemId} not found.");
+var userid=await _cartRepository.GetUserIdByItemId(itemId);
 
+            if (userid == null)
+                throw new KeyNotFoundException(
+                    $"User for cart item with ID {itemId} not found.");
+
+        
 
             await _cartRepository.ItemDelete(item);
+            await _cache.RemoveAsync($"cart:user:{userid}");
 
-         
+
+
 
             return true;
         }
 
         public async Task<CartDTO?> GetByUserId(int userId)
         {
+            var cacheKey = $"cart:user:{userId}";
+
+            // 1. Check Redis
+            var cachedCart = await _cache.GetStringAsync(cacheKey);
+
+            if (cachedCart != null)
+            {
+                return JsonSerializer.Deserialize<CartDTO>(cachedCart)!;
+            }
+
+            // 2. If not in Redis → SQL
             var cart = await _cartRepository.GetByUserId(userId);
 
             if (cart == null)
                 throw new KeyNotFoundException(
-                   $"Cart for user with ID {userId} not found.");
+                    $"Cart for user with ID {userId} not found.");
 
-            return new CartDTO
+            // 3. Convert Entity → DTO
+            var cartDto = new CartDTO
             {
                 Id = cart.Id,
 
@@ -104,6 +132,20 @@ namespace ECommerce.Application.Services
                     IgammeUrl = x.Product.ImageUrl
                 }).ToList()
             };
+
+            // 4. Save DTO in Redis
+            var option = new DistributedCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10)
+            };
+
+            await _cache.SetStringAsync(
+                cacheKey,
+                JsonSerializer.Serialize(cartDto),
+                option
+            );
+
+            return cartDto;
         }
 
         public async Task<bool> UpdateItem(
@@ -116,10 +158,14 @@ namespace ECommerce.Application.Services
                 throw new KeyNotFoundException(
                       $"Cart item with ID {itemId} not found.");
 
+                      var userid= await _cartRepository.GetUserIdByItemId(itemId);
+            if (userid == null)
+                throw new KeyNotFoundException(
+                    $"User for cart item with ID {itemId} not found.");
             item.Quantity = cartItemUpdate.Quantity;
 
             await _cartRepository.ItemUpdate(item);
-
+            await _cache.RemoveAsync($"cart:user:{userid}");
             
 
             return true;

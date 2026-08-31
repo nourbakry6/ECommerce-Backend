@@ -19,6 +19,8 @@ namespace ECommerce.Application.Interface
         Task ItemAdd(CartItem cartItem);
 
         Task<CartItem?> GetItemById(int id);
+        Task<int?> GetUserIdByItemId(int itemId);
+    
 
-    }
+}
 }

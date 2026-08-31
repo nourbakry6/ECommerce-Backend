@@ -1,19 +1,22 @@
 ﻿using ECommerce.Application.DTO;
 using ECommerce.Application.Interface;
 using ECommerce.Domain.entites;
+using Microsoft.Extensions.Caching.Distributed;
+using System.Text.Json;
 
 namespace ECommerce.Application.Services
 {
     public class CategoryService : ICategoryService
     {
         private readonly ICategoryRepository _categoryRepository;
-       
 
+        private readonly  IDistributedCache  _Cache;
         public CategoryService(
             ICategoryRepository categoryRepository,
-            IUnitOfWork unitOfWork)
+            IUnitOfWork unitOfWork,IDistributedCache distributedCache)
         {
             _categoryRepository = categoryRepository;
+            _Cache = distributedCache;
         
         }
 
@@ -25,6 +28,7 @@ namespace ECommerce.Application.Services
             };
 
             await _categoryRepository.Add(category);
+            await _Cache.RemoveAsync("category");
             
         }
 
@@ -37,30 +41,60 @@ namespace ECommerce.Application.Services
           $"Category with ID {id} not found.");
 
             await _categoryRepository.Delete(category);
-         
+            await _Cache.RemoveAsync($"category:{id}");
+            await _Cache.RemoveAsync("category");
 
             return true;
         }
 
         public async Task<List<CategoryDTO>> GetAll()
         {
+            var cacheKey = "category";
+
+            var cachedCategory = await _Cache.GetStringAsync(cacheKey);
+
+            if (cachedCategory != null)
+            {
+                return JsonSerializer.Deserialize<List<CategoryDTO>>(cachedCategory)!;
+            }
+
             var categories = await _categoryRepository.GetAll();
 
-            return categories.Select(c => new CategoryDTO
+            var categoryDto = categories.Select(c => new CategoryDTO
             {
                 Name = c.Name
             }).ToList();
+
+            var option = new DistributedCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10)
+            };
+
+            await _Cache.SetStringAsync(
+                cacheKey,
+                JsonSerializer.Serialize(categoryDto),
+                option
+            );
+
+            return categoryDto;
         }
 
         public async Task<CategoryDetailsDTO?> GetById(int id)
         {
+            var cachekey = $"category:{id}";
+            var cachecategory=await _Cache.GetStringAsync(cachekey);
+            if (cachecategory != null) {
+
+             return   JsonSerializer.Deserialize<CategoryDetailsDTO>(cachecategory);
+            }
+
             var category = await _categoryRepository.GetById(id);
 
             if (category == null)
                 throw new KeyNotFoundException(
           $"Category with ID {id} not found.");
 
-            return new CategoryDetailsDTO
+            var categoryDto= new CategoryDetailsDTO
             {
                 id = category.Id,
                 Name = category.Name,
@@ -71,6 +105,16 @@ namespace ECommerce.Application.Services
                     Price = p.Price
                 }).ToList()
             };
+            var option = new DistributedCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10)
+            };
+            await _Cache.SetStringAsync(
+            cachekey, JsonSerializer.Serialize(categoryDto), option
+            );
+            return categoryDto;
+
+
         }
 
         public async Task<bool> Update(
@@ -86,7 +130,8 @@ namespace ECommerce.Application.Services
             category.Name = categoryUpdateDTO.Name;
 
             await _categoryRepository.Update(category);
-           
+           await _Cache.RemoveAsync($"category:{id}");
+            await _Cache.RemoveAsync("category");
 
             return true;
         }

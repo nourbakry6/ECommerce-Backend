@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
+using System.Reflection.Emit;
 using System.Security.Claims;
 using System.Text;
 
@@ -42,9 +43,37 @@ namespace ECommerce.Infrastructure.Data
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
+            //add index
+       
+           builder.Entity<Product>()
+                .HasIndex(p => p.CategoryId);
 
-            // User → Cart
-            builder.Entity<ApplicationUser>()
+            builder.Entity<Product>()
+                .HasIndex(p => p.Name);
+
+          builder.Entity<Order>()
+                .HasIndex(o => o.UserId);
+
+            builder.Entity<Order>()
+                .HasIndex(o => o.Status);
+
+            builder.Entity<OrderItem>()
+                .HasIndex(oi => oi.OrderId);
+
+          builder.Entity<OrderItem>()
+                .HasIndex(oi => oi.ProductId);
+          builder.Entity<Cart>()
+                .HasIndex(c => c.UserId)
+                .IsUnique();
+
+            builder.Entity<CartItem>()
+                .HasIndex(ci => ci.CartId);
+
+          builder.Entity<CartItem>()
+                .HasIndex(ci => ci.ProductId);
+        
+        // User → Cart
+        builder.Entity<ApplicationUser>()
                 .HasOne<Cart>()//kl user endu cart 1
                 .WithOne()//kl cart end user whad
                 .HasForeignKey<Cart>(c => c.UserId) //forgin  key hwh userid
@@ -105,6 +134,7 @@ namespace ECommerce.Infrastructure.Data
             builder.Entity<Product>()
             .Property(c=>c.Price) .HasPrecision (18,2);
 
+         
         }
        
     }

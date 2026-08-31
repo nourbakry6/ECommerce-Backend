@@ -22,6 +22,17 @@ namespace ECommerce.API
         public static async Task Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
+            //rbtna api b redis 
+            builder.Services.AddStackExchangeRedisCache(options =>
+            {
+                //options.Configuration = "redis:6379";
+                //redis:
+                // image: redis: latest
+                //laen esm service b docker compose hk container bi alb docker compose bytwslu hsab esm service msh localhost;6379
+              options.Configuration=  builder.Configuration.GetConnectionString("Redis");
+            });
+
+
             builder.Services.AddEndpointsApiExplorer();
 
 

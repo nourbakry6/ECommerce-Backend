@@ -2,7 +2,8 @@
 using ECommerce.Application.Interface;
 using ECommerce.Domain.entites;
 using ECommerce.Domain.enums;
-
+using Microsoft.Extensions.Caching.Distributed;
+using System.Text.Json;
 namespace ECommerce.Application.Services
 {
     public class OrderService : IOrderService
@@ -11,16 +12,19 @@ namespace ECommerce.Application.Services
         private readonly ICartRepository _cartRepository;
         private readonly IProductRepository _productRepository;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IDistributedCache _cache;
         public OrderService(
        IOrderRepository orderRepository,
     ICartRepository cartRepository,
        IProductRepository productRepository,
-       IUnitOfWork unitOfWork)
+       IUnitOfWork unitOfWork,
+       IDistributedCache distributedCache)
         {
             _orderRepository = orderRepository;
             _cartRepository= cartRepository;
             _productRepository = productRepository;
             _unitOfWork = unitOfWork;
+            _cache = distributedCache;
         }
 
         public async Task<bool> CancelOrder(int orderId, int userId)
@@ -43,7 +47,9 @@ namespace ECommerce.Application.Services
             order.Status = OrderStatus.Cancelled;
 
             await _orderRepository.CancelOrder(order);
-
+            await _cache.RemoveAsync($"order:{orderId}:user:{userId}");
+            await _cache.RemoveAsync($"order:user:{userId}");
+            await _cache.RemoveAsync("order");
             return true;
         }
         public async Task<bool> Checkout(int userId)
@@ -57,7 +63,7 @@ namespace ECommerce.Application.Services
                 throw new InvalidOperationException("Cart is empty.");
 
             await _unitOfWork.BeginTransactionAsync();
-
+           
             try
             {
                 decimal totalAmount = 0;
@@ -68,11 +74,11 @@ namespace ECommerce.Application.Services
                     OrderDate = DateTime.Now,
                     OrderItems = new List<OrderItem>()
                 };
-
+                var productIds = new List<int>();
                 foreach (var item in cart.CartItems)
                 {
                     var product = await _productRepository.GetById(item.ProductId);
-
+                  
                     if (product == null)
                         throw new KeyNotFoundException(
                             $"Product with ID {item.ProductId} not found.");
@@ -81,7 +87,7 @@ namespace ECommerce.Application.Services
                         throw new InvalidOperationException(
                             $"Not enough stock for product: {product.Name}.");
 
-
+                    
                     var orderItem = new OrderItem
                     {
                         ProductId = product.Id,
@@ -96,8 +102,10 @@ namespace ECommerce.Application.Services
                     product.Stock -= item.Quantity;
 
                     await _productRepository.Update(product);
+                    productIds.Add(product.Id);
                 }
 
+             
                 order.TotalAmount = totalAmount;
 
                 await _orderRepository.AddOrder(order);
@@ -108,6 +116,14 @@ namespace ECommerce.Application.Services
 
                 await _unitOfWork.CommitTransactionAsync();
 
+                foreach(var productid in productIds){
+                    await _cache.RemoveAsync($"product:{productid}");
+                }
+                await _cache.RemoveAsync($"order:user:{userId}");
+                await _cache.RemoveAsync("order");
+                await _cache.RemoveAsync($"cart:user:{userId}");
+                await _cache.RemoveAsync("products");
+               
                 return true;
             }
             catch (Exception ex)
@@ -121,6 +137,12 @@ namespace ECommerce.Application.Services
 
         public async Task<List<OrderDTO>> GetAllOrder()
         {
+            var cachekey = "order";
+            var cachedorder = await _cache.GetStringAsync(cachekey);
+            if(cachedorder != null){
+                return JsonSerializer.Deserialize<List<OrderDTO>>(cachedorder)!;
+            }
+
             var orders = await _orderRepository.GetAllOrder();
 
             var orderDto = orders.Select(p => new OrderDTO
@@ -140,11 +162,25 @@ namespace ECommerce.Application.Services
 
             }).ToList();
 
+            var option = new DistributedCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10)
+            };
+            await _cache.SetStringAsync(
+            cachekey, JsonSerializer.Serialize(orderDto), option
+            );
+
+
             return orderDto;
         }
 
         public async Task<OrderDTO?> GetByOrderId(int orderId, int userId)
         {
+            var cachekey = $"order:{orderId}:user:{userId}";
+            var cachedorder= await _cache.GetStringAsync(cachekey);
+            if (cachedorder != null) {
+                return JsonSerializer.Deserialize<OrderDTO>(cachedorder);
+            }
             var order = await _orderRepository.GetByOrderId(orderId);
             if (order == null)
                 throw new KeyNotFoundException(
@@ -154,7 +190,7 @@ namespace ECommerce.Application.Services
                 throw new UnauthorizedAccessException(
                     "You are not allowed to access this order.");
 
-            return new OrderDTO
+            var orderDto= new OrderDTO
             {
                 Status = order.Status,
                 Id = order.Id,
@@ -170,10 +206,24 @@ namespace ECommerce.Application.Services
                     Price = p.Price
                 }).ToList()
             };
+
+            var option = new DistributedCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10)
+            };
+            await _cache.SetStringAsync(
+            cachekey, JsonSerializer.Serialize(orderDto), option
+            );
+            return orderDto;
         }
 
         public async Task<List<OrderDTO>> GetMyOrders(int userId)
         {
+        var cachekey=$"order:user:{userId}";
+            var cachedorder = await _cache.GetStringAsync(cachekey);
+            if(cachedorder!=null){
+                return JsonSerializer.Deserialize<List<OrderDTO>>(cachedorder)!;
+            }
             var orderList = await _orderRepository.GetMyOrders(userId);
 
             var orderDto = orderList.Select(p => new OrderDTO
@@ -193,7 +243,13 @@ namespace ECommerce.Application.Services
                 }).ToList()
 
             }).ToList();
-
+            var option = new DistributedCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10)
+            };
+            await _cache.SetStringAsync(
+            cachekey, JsonSerializer.Serialize(orderDto), option
+            );
             return orderDto;
         }
 
@@ -207,9 +263,12 @@ namespace ECommerce.Application.Services
                 throw new KeyNotFoundException($"Order with ID {orderId} not found.");
 
             order.Status = updateOrderStatusDTO.status;
+            var userid = order.UserId;
 
             await _orderRepository.UpdateOrder(order);
-
+            await _cache.RemoveAsync($"order:{orderId}:user:{userid}");
+            await _cache.RemoveAsync($"order:user:{userid}");
+            await _cache.RemoveAsync("order");
             return true;
         }
     }
