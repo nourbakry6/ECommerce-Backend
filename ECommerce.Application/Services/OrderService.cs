@@ -13,18 +13,23 @@ namespace ECommerce.Application.Services
         private readonly IProductRepository _productRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IDistributedCache _cache;
+        private readonly IOrderNotification _orderNotification;
+        private readonly IStockNotification _stock;
         public OrderService(
        IOrderRepository orderRepository,
     ICartRepository cartRepository,
        IProductRepository productRepository,
        IUnitOfWork unitOfWork,
-       IDistributedCache distributedCache)
+       IDistributedCache distributedCache,IOrderNotification orderNotification,
+       IStockNotification stock)
         {
             _orderRepository = orderRepository;
             _cartRepository= cartRepository;
             _productRepository = productRepository;
             _unitOfWork = unitOfWork;
             _cache = distributedCache;
+            _orderNotification = orderNotification;
+            _stock = stock;
         }
 
         public async Task<bool> CancelOrder(int orderId, int userId)
@@ -46,7 +51,7 @@ namespace ECommerce.Application.Services
 
             order.Status = OrderStatus.Cancelled;
 
-            await _orderRepository.CancelOrder(order);
+            await _orderRepository.UpdateOrder(order);
             await _cache.RemoveAsync($"order:{orderId}:user:{userId}");
             await _cache.RemoveAsync($"order:user:{userId}");
             await _cache.RemoveAsync("order");
@@ -75,6 +80,7 @@ namespace ECommerce.Application.Services
                     OrderItems = new List<OrderItem>()
                 };
                 var productIds = new List<int>();
+                var stockUpdates = new List<(int ProductId, int Stock)>();
                 foreach (var item in cart.CartItems)
                 {
                     var product = await _productRepository.GetById(item.ProductId);
@@ -102,7 +108,9 @@ namespace ECommerce.Application.Services
                     product.Stock -= item.Quantity;
 
                     await _productRepository.Update(product);
+                  
                     productIds.Add(product.Id);
+                    stockUpdates.Add((product.Id, product.Stock));
                 }
 
              
@@ -118,6 +126,9 @@ namespace ECommerce.Application.Services
 
                 foreach(var productid in productIds){
                     await _cache.RemoveAsync($"product:{productid}");
+                }
+                foreach(var update in stockUpdates){
+                    await _stock.SendStockUpdate(update.ProductId, update.Stock);
                 }
                 await _cache.RemoveAsync($"order:user:{userId}");
                 await _cache.RemoveAsync("order");
@@ -266,6 +277,10 @@ namespace ECommerce.Application.Services
             var userid = order.UserId;
 
             await _orderRepository.UpdateOrder(order);
+            await _orderNotification.SendOrderStatusUpdate(
+    order.UserId,
+    order.Id,
+    order.Status.ToString());
             await _cache.RemoveAsync($"order:{orderId}:user:{userid}");
             await _cache.RemoveAsync($"order:user:{userid}");
             await _cache.RemoveAsync("order");

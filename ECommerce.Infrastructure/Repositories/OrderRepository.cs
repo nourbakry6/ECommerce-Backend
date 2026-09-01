@@ -20,16 +20,13 @@ namespace ECommerce.Infrastructure.Repositories
             return Task.CompletedTask;
         }
 
-        public async Task CancelOrder(Order order)
-        {
-            _Context.Orders.Update(order);
-            await _Context.SaveChangesAsync();
-        }
-
+      
         public async Task<List<Order>> GetAllOrder()
         {
             return await _Context.Orders
+              .AsNoTracking()
                 .Include(p => p.OrderItems)
+              
                 .ThenInclude(p => p.Product)
                 .ToListAsync();
         }
@@ -45,6 +42,7 @@ namespace ECommerce.Infrastructure.Repositories
         public async Task<List<Order>> GetMyOrders(int userId)
         {
             return await _Context.Orders
+              .AsNoTracking()
                 .Include(p => p.OrderItems)
                 .ThenInclude(p => p.Product)
                 .Where(p => p.UserId == userId)

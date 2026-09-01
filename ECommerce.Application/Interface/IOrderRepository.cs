@@ -18,6 +18,6 @@ namespace ECommerce.Application.Interface
 
         Task UpdateOrder(Order order);
 
-        Task CancelOrder(Order order);
+        
     }
 }

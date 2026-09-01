@@ -1,5 +1,7 @@
 
+using ECommerce.API.Hubs;
 using ECommerce.API.Middleware;
+using ECommerce.API.Notifications;
 using ECommerce.Application.Interface;
 using ECommerce.Application.Services;
 using ECommerce.Infrastructure.Data;
@@ -9,6 +11,7 @@ using ECommerce.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.OpenApi;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
@@ -29,10 +32,16 @@ namespace ECommerce.API
                 //redis:
                 // image: redis: latest
                 //laen esm service b docker compose hk container bi alb docker compose bytwslu hsab esm service msh localhost;6379
-              options.Configuration=  builder.Configuration.GetConnectionString("Redis");
+              options.Configuration=  builder.Configuration.GetConnectionString("Redis");//lzm chghlu  docker aw bnzl redis mn window
             });
 
-
+            builder.Services.AddSignalR();//registration lal signalR
+            builder.Services.AddScoped<IOrderNotification, OrderNotification>();
+         builder.Services.AddScoped<IStockNotification,StockNotification>();
+            var app = builder.Build();
+            app.MapHub<OrderHub>("/hubs/orders");// hyda endpoint ben client w server 
+                                                 //y3ni iza client hwl y3ml connect a signalR connect a /hubs/ordersbykhdu a orderhub
+            app.MapHub<StockHub>("/hubs/stock");
             builder.Services.AddEndpointsApiExplorer();
 
 
@@ -138,7 +147,7 @@ namespace ECommerce.API
             builder.Services.AddAuthorization();
             builder.Services.AddControllers();
             //l app fiya kl service t3un project useramanger dbcontext..
-            var app = builder.Build();
+           
             //htyta b program cs krml kl ma ychgthl l program yt2kd iza endi admin aw la aw by3ml
             //nhna bdna nst3ml usermnge w rolemnger mra whe awl ma ychgtchl project ta na3mols seeder so emlan scope
             using (var scope = app.Services.CreateScope())

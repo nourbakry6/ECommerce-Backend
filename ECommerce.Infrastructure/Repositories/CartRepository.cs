@@ -23,6 +23,7 @@ namespace ECommerce.Infrastructure.Repositories
         public async Task<Cart?> GetByUserId(int userId)
         {
             return await _context.Carts
+            
                 .Include(c => c.CartItems)
                 .ThenInclude(ci => ci.Product)
                 .FirstOrDefaultAsync(c => c.UserId == userId);
@@ -38,6 +39,7 @@ namespace ECommerce.Infrastructure.Repositories
         public async Task<int?> GetUserIdByItemId(int itemId)
         {
             return await _context.CartItems
+            
                 .Where(ci => ci.Id == itemId)
                 .Select(ci => (int?)ci.Cart.UserId)
                 .FirstOrDefaultAsync();

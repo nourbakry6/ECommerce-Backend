@@ -27,6 +27,7 @@ namespace ECommerce.Infrastructure.Repositories
         {
         //btruh a dbset taeit prodcut w btred klchi hka list mtl select * from prduct
             return await  _context.Products
+            .AsNoTracking()
             .Include(c=>c.Category)
             .ToListAsync();
         }
