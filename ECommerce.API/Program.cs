@@ -38,10 +38,7 @@ namespace ECommerce.API
             builder.Services.AddSignalR();//registration lal signalR
             builder.Services.AddScoped<IOrderNotification, OrderNotification>();
          builder.Services.AddScoped<IStockNotification,StockNotification>();
-            var app = builder.Build();
-            app.MapHub<OrderHub>("/hubs/orders");// hyda endpoint ben client w server 
-                                                 //y3ni iza client hwl y3ml connect a signalR connect a /hubs/ordersbykhdu a orderhub
-            app.MapHub<StockHub>("/hubs/stock");
+           
             builder.Services.AddEndpointsApiExplorer();
 
 
@@ -147,7 +144,7 @@ namespace ECommerce.API
             builder.Services.AddAuthorization();
             builder.Services.AddControllers();
             //l app fiya kl service t3un project useramanger dbcontext..
-           
+            var app = builder.Build();
             //htyta b program cs krml kl ma ychgthl l program yt2kd iza endi admin aw la aw by3ml
             //nhna bdna nst3ml usermnge w rolemnger mra whe awl ma ychgtchl project ta na3mols seeder so emlan scope
             using (var scope = app.Services.CreateScope())
@@ -169,7 +166,8 @@ namespace ECommerce.API
 
                 await DbSeeder.Seed(userManager, roleManager);//bi nfza
             }
-
+           
+            
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
             {
@@ -177,6 +175,9 @@ namespace ECommerce.API
                
             }
 
+            app.MapHub<OrderHub>("/hubs/orders");// hyda endpoint ben client w server 
+                                                 //y3ni iza client hwl y3ml connect a signalR connect a /hubs/ordersbykhdu a orderhub
+            app.MapHub<StockHub>("/hubs/stock");
             app.UseMiddleware<ExceptionMiddleware>();
 
             app.UseHttpsRedirection();
